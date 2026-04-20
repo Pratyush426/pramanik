@@ -18,6 +18,14 @@ jobs:
       - name: Run ComplianceAI Multi-Agent Scan
         id: scan
         run: |
+          if [ -z "${{ secrets.COMPLIANCE_AI_URL }}" ]; then
+            echo "Skipping scan: COMPLIANCE_AI_URL secret not set. The build will pass by default."
+            echo "critical=0" >> $GITHUB_OUTPUT
+            echo "total=0" >> $GITHUB_OUTPUT
+            echo "build_passed=true" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+          
           echo "Scanning ${{ github.repository }} with ComplianceAI agents..."
 
           RESPONSE=$(curl -s -w "\n%{http_code}" -X POST "${{ secrets.COMPLIANCE_AI_URL }}/api/webhook/github" \
