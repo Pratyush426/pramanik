@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { API_URL } from "../config";
+import ReactMarkdown from "react-markdown";
 import { Send, Paperclip, Image, FileText, Mic, X, Check } from "lucide-react";
 import "./PopupChatPanel.css";
 
@@ -171,7 +172,7 @@ export default function PopupChatPanel({ onClose }) {
               {msg.type === "bot" ? "🤖" : "👤"}
             </div>
             <div className="popup-message-content">
-              <p className="popup-message-text">{msg.text}</p>
+              <div className="popup-message-text"><ReactMarkdown>{msg.text}</ReactMarkdown></div>
               {msg.files && msg.files.length > 0 && (
                 <div className="popup-message-files">
                   {msg.files.map((file, idx) => (

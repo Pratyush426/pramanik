@@ -1,0 +1,280 @@
+version: 2
+
+# GitHub Dependabot Configuration for Pramanik SOC2 Analyzer
+# This file automates dependency updates across Python and Node.js projects
+
+registries:
+  # Optional: Add custom package registries if needed
+  # Example:
+  # python-custom:
+  #   type: "python-index"
+  #   url: "https://pypi.custom.com"
+  #   username: "user"
+  #   password: ${{ secrets.CUSTOM_PIP_PASSWORD }}
+
+updates:
+  # ============================================================
+  # 1. PYTHON BACKEND DEPENDENCIES
+  # ============================================================
+  - package-manager: "pip"
+    directory: "/soc2-analyzer/backend"
+    
+    # Schedule
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "03:00"
+      timezone: "America/New_York"
+    
+    # PR Management
+    open-pull-requests-limit: 10
+    pull-requests-limit: 100
+    pull-request-branch-name:
+      separator: "/"
+      prefix: "dependabot"
+    
+    # Commit & Rebase
+    commit-message:
+      prefix: "chore(deps): "
+      prefix-scope: "python"
+      include: "scope"
+    rebase-strategy: "auto"
+    
+    # Version Strategy
+    version-strategy: "auto"
+    
+    # Filter Dependencies
+    allow:
+      - dependency-type: "production"
+    
+    # Ignore Rules (edit as needed)
+    ignore:
+      # Example: ignore specific versions
+      # - dependency-name: "deprecated-package"
+      #   versions: [">=3.0.0"]
+    
+    # Grouping Strategy for Python
+    groups:
+      production-updates:
+        dependency-types: ["production"]
+        update-types: ["patch", "minor"]
+      
+      major-updates:
+        dependency-types: ["production"]
+        update-types: ["major"]
+    
+    # Labels & Assignment
+    labels: ["python", "dependencies", "backend"]
+    reviewers:
+      - "@backend-team"
+    assignees: []
+    
+    # Auto-merge only for patch updates with test passing
+    auto-merge:
+      enabled: false  # Set to true after validating CI/CD
+    
+    # Vulnerability handling
+    security-advisories-limit: 10
+
+  # ============================================================
+  # 2. NODE.JS BACKEND DEPENDENCIES
+  # ============================================================
+  - package-manager: "npm"
+    directory: "/soc2-analyzer/backend"
+    
+    # Schedule
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "03:30"
+      timezone: "America/New_York"
+    
+    # PR Management
+    open-pull-requests-limit: 5
+    pull-requests-limit: 50
+    pull-request-branch-name:
+      separator: "/"
+      prefix: "dependabot"
+    
+    # Commit & Rebase
+    commit-message:
+      prefix: "chore(deps): "
+      prefix-scope: "backend-node"
+      include: "scope"
+    rebase-strategy: "auto"
+    
+    # Version Strategy
+    version-strategy: "auto"
+    
+    # Filter Dependencies
+    allow:
+      - dependency-type: "production"
+    
+    # Grouping Strategy
+    groups:
+      production-patches:
+        dependency-types: ["production"]
+        update-types: ["patch"]
+        patterns: ["*"]
+      
+      production-features:
+        dependency-types: ["production"]
+        update-types: ["minor"]
+        patterns: ["*"]
+      
+      production-major:
+        dependency-types: ["production"]
+        update-types: ["major"]
+        patterns: ["*"]
+    
+    # Labels & Assignment
+    labels: ["javascript", "backend", "dependencies", "nodejs"]
+    reviewers:
+      - "@backend-team"
+    
+    # Auto-merge disabled until CI/CD validated
+    auto-merge:
+      enabled: false
+
+  # ============================================================
+  # 3. NODE.JS FRONTEND DEPENDENCIES
+  # ============================================================
+  - package-manager: "npm"
+    directory: "/soc2-analyzer/frontend"
+    
+    # Schedule
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "04:00"
+      timezone: "America/New_York"
+    
+    # PR Management
+    open-pull-requests-limit: 5
+    pull-requests-limit: 50
+    pull-request-branch-name:
+      separator: "/"
+      prefix: "dependabot"
+    
+    # Commit & Rebase
+    commit-message:
+      prefix: "chore(deps): "
+      prefix-scope: "frontend"
+      include: "scope"
+    rebase-strategy: "auto"
+    
+    # Version Strategy
+    version-strategy: "auto"
+    
+    # Filter Dependencies (separate dev and production)
+    allow:
+      - dependency-type: "production"
+      - dependency-type: "development"
+    
+    # Ignore Rules (customize as needed)
+    ignore:
+      # Uncomment to ignore specific packages
+      # - dependency-name: "legacy-package"
+      #   versions: ["*"]
+    
+    # Grouping Strategy for Frontend
+    groups:
+      # Core UI Framework
+      react-updates:
+        dependency-types: ["production"]
+        patterns: ["react", "react-dom"]
+      
+      # Build Tools
+      build-tools:
+        dependency-types: ["development"]
+        patterns:
+          - "vite*"
+          - "@vitejs*"
+          - "tailwindcss*"
+          - "postcss*"
+          - "autoprefixer*"
+      
+      # 3D Libraries
+      three-d-libs:
+        dependency-types: ["production"]
+        patterns:
+          - "three*"
+          - "@react-three*"
+          - "ogl*"
+      
+      # Animation & Motion
+      animation-libs:
+        dependency-types: ["production"]
+        patterns:
+          - "framer-motion*"
+          - "gsap*"
+          - "lenis*"
+      
+      # Data & UI Libraries
+      data-ui-libs:
+        dependency-types: ["production"]
+        patterns:
+          - "recharts*"
+          - "lucide-react*"
+          - "react-markdown*"
+      
+      # Backend Integration
+      backend-integration:
+        dependency-types: ["production"]
+        patterns:
+          - "@supabase*"
+          - "html2canvas*"
+          - "jspdf*"
+      
+      # Type Definitions
+      type-definitions:
+        dependency-types: ["development"]
+        patterns:
+          - "@types/*"
+    
+    # Labels & Assignment
+    labels: ["javascript", "frontend", "dependencies", "react", "ui"]
+    reviewers:
+      - "@frontend-team"
+    assignees: []
+    
+    # Auto-merge disabled - frontend changes need review
+    auto-merge:
+      enabled: false
+
+# ============================================================
+# NOTES & CONFIGURATION GUIDE
+# ============================================================
+# 
+# SCHEDULE DETAILS:
+# - interval: "daily", "weekly", "monthly"
+# - day: "monday" - "sunday" (for weekly)
+# - time: "HH:MM" in UTC or specified timezone
+# 
+# VERSION STRATEGIES:
+# - "auto": Automatically bumps version constraints (recommended)
+# - "increase-semver-minor": Only allows minor bumps
+# - "increase-semver-major": Conservative, major bumps only
+# 
+# DEPENDENCY TYPES:
+# - "production": Only update main dependencies
+# - "development": Only update dev/test dependencies  
+# - "all": Update both production and development
+# 
+# UPDATE TYPES for groups:
+# - "patch": Bug fixes only (1.2.3)
+# - "minor": New features (1.2.0)
+# - "major": Breaking changes (1.0.0)
+# - "security": Security patches only
+# 
+# AUTO-MERGE:
+# - Only enable after validating CI/CD passes reliably
+# - Recommended for patch versions only
+# - Never for major version updates
+# 
+# NEXT STEPS:
+# 1. Push this file to .github/dependabot.yml
+# 2. Enable Dependabot in GitHub Settings
+# 3. Validate your CI/CD pipeline works with Dependabot PRs
+# 4. Monitor first few PRs and adjust configuration
+# 5. Once stable, enable auto-merge for patch updates

@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { API_URL } from "../config";
+import ReactMarkdown from "react-markdown";
 import { Send, MessageCircle, Upload, Image, FileText, Mic } from "lucide-react";
 import "./ComplianceChatBot.css";
 
@@ -178,7 +179,7 @@ export default function ComplianceChatBot() {
                   {msg.type === "bot" ? "🤖" : "👤"}
                 </div>
                 <div className="message-bubble">
-                  <p className="message-text">{msg.text}</p>
+                  <div className="message-text"><ReactMarkdown>{msg.text}</ReactMarkdown></div>
                   <span className="message-time">
                     {msg.timestamp.toLocaleTimeString([], {
                       hour: "2-digit",

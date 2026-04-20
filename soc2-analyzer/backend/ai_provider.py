@@ -39,7 +39,7 @@ class GroqProvider:
     """Groq Cloud — LLaMA 3.3 70B (free tier, fast)"""
 
     name = "groq"
-    model = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
+    model = os.getenv("GROQ_MODEL", "llama-3.1-8b-instant")
 
     def __init__(self):
         self._client = None

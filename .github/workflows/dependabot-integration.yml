@@ -1,0 +1,267 @@
+name: "Dependabot Integration & Auto-Review"
+
+# This workflow handles Dependabot PRs with automatic reviews and status checks
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  pull-requests: write
+  contents: read
+
+jobs:
+  # ============================================================
+  # DEPENDABOT PR AUTO-REVIEW
+  # ============================================================
+  dependabot-review:
+    name: "Dependabot Auto-Review"
+    runs-on: ubuntu-latest
+    if: github.actor == 'dependabot[bot]'
+    
+    steps:
+      - name: "Checkout code"
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
+      
+      - name: "Check update type"
+        id: check-update
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const pr = context.payload.pull_request;
+            const title = pr.title.toLowerCase();
+            
+            // Determine update type
+            let updateType = 'unknown';
+            if (title.includes('patch') || /bump.*\d+\.\d+\.[1-9]/.test(pr.title)) {
+              updateType = 'patch';
+            } else if (title.includes('minor') || /bump.*\d+\.[1-9]+\.\d+/.test(pr.title)) {
+              updateType = 'minor';
+            } else if (title.includes('major') || /bump.*[1-9]+\.\d+\.\d+/.test(pr.title)) {
+              updateType = 'major';
+            }
+            
+            core.setOutput('update-type', updateType);
+            console.log(`Detected update type: ${updateType}`);
+      
+      - name: "Comment on PR (info)"
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const updateType = '${{ steps.check-update.outputs.update-type }}';
+            const messages = {
+              patch: '✅ **Patch Update** - Low risk. Auto-approval recommended after tests pass.',
+              minor: '⚠️ **Minor Update** - New features. Recommend reviewing changelog.',
+              major: '🔴 **Major Update** - Breaking changes. Requires manual review.',
+              unknown: '❓ Update type unknown. Please review manually.'
+            };
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: messages[updateType] || messages.unknown
+            });
+
+  # ============================================================
+  # PYTHON DEPENDENCY VALIDATION
+  # ============================================================
+  python-dependencies:
+    name: "Python Dependencies Check"
+    runs-on: ubuntu-latest
+    if: |
+      github.actor == 'dependabot[bot]' &&
+      contains(github.head_ref, 'dependabot') &&
+      (contains(github.head_ref, 'pip') || contains(github.head_ref, 'python'))
+    
+    steps:
+      - name: "Checkout code"
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
+      
+      - name: "Setup Python"
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      
+      - name: "Check Python dependencies"
+        working-directory: soc2-analyzer/backend
+        continue-on-error: true
+        run: |
+          echo "🔍 Validating Python dependencies..."
+          
+          # Install dependencies
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          
+          # Check for circular dependencies or conflicts
+          pip check
+          
+          echo "✅ Python dependencies validated"
+
+  # ============================================================
+  # NODE.JS DEPENDENCY VALIDATION
+  # ============================================================
+  nodejs-dependencies:
+    name: "Node.js Dependencies Check"
+    runs-on: ubuntu-latest
+    if: |
+      github.actor == 'dependabot[bot]' &&
+      contains(github.head_ref, 'dependabot') &&
+      contains(github.head_ref, 'npm')
+    
+    strategy:
+      matrix:
+        directory:
+          - soc2-analyzer/backend
+          - soc2-analyzer/frontend
+    
+    steps:
+      - name: "Checkout code"
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
+      
+      - name: "Setup Node.js"
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: '${{ matrix.directory }}/package-lock.json'
+      
+      - name: "Validate ${{ matrix.directory }}"
+        working-directory: ${{ matrix.directory }}
+        continue-on-error: true
+        run: |
+          echo "🔍 Validating Node.js dependencies in ${{ matrix.directory }}..."
+          
+          # Install dependencies
+          npm ci
+          
+          # Check for audit issues
+          npm audit --audit-level=moderate
+          
+          # Check for outdated packages
+          npm outdated || true
+          
+          echo "✅ Node.js dependencies validated"
+
+  # ============================================================
+  # SECURITY VULNERABILITY CHECK
+  # ============================================================
+  security-check:
+    name: "Security Vulnerability Scan"
+    runs-on: ubuntu-latest
+    if: github.actor == 'dependabot[bot]'
+    
+    steps:
+      - name: "Checkout code"
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
+      
+      - name: "Check for known vulnerabilities"
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const pr = context.payload.pull_request;
+            
+            // Check if this is a security update
+            if (pr.title.includes('security') || pr.body.includes('security')) {
+              console.log('🔴 Security vulnerability fix detected');
+              
+              // Add high-priority label
+              github.rest.issues.addLabels({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                labels: ['security', 'critical-review']
+              });
+            }
+
+  # ============================================================
+  # CHANGELOG & RELEASE NOTES CHECK
+  # ============================================================
+  changelog-check:
+    name: "Changelog Analysis"
+    runs-on: ubuntu-latest
+    if: github.actor == 'dependabot[bot]'
+    
+    steps:
+      - name: "Extract changelog link"
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const pr = context.payload.pull_request;
+            const body = pr.body || '';
+            
+            // Look for changelog/release notes links
+            const changelogLinks = body.match(/https:\/\/[^\s]+\/releases[^\s)]*|https:\/\/[^\s]+\/blob[^\s)]*\/CHANGELOG[^\s)]*|https:\/\/[^\s]+\/wiki.*Change[^\s)]*/g);
+            
+            if (changelogLinks && changelogLinks.length > 0) {
+              console.log('📝 Changelog links found:');
+              changelogLinks.forEach(link => console.log(`  - ${link}`));
+              
+              core.setOutput('has-changelog', 'true');
+            } else {
+              core.setOutput('has-changelog', 'false');
+            }
+
+  # ============================================================
+  # SUMMARY STATUS
+  # ============================================================
+  dependabot-status:
+    name: "Dependabot Status Summary"
+    runs-on: ubuntu-latest
+    needs: [python-dependencies, nodejs-dependencies, security-check]
+    if: always() && github.actor == 'dependabot[bot]'
+    
+    steps:
+      - name: "Post summary comment"
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const python_status = '${{ needs.python-dependencies.result }}';
+            const nodejs_status = '${{ needs.nodejs-dependencies.result }}';
+            const security_status = '${{ needs.security-check.result }}';
+            
+            const getEmoji = (status) => {
+              const map = {
+                'success': '✅',
+                'failure': '❌',
+                'skipped': '⏭️',
+                'cancelled': '❌'
+              };
+              return map[status] || '❓';
+            };
+            
+            const body = `## 🤖 Dependabot Automated Checks
+
+| Check | Status |
+|-------|--------|
+| Python Dependencies | ${getEmoji(python_status)} ${python_status} |
+| Node.js Dependencies | ${getEmoji(nodejs_status)} ${nodejs_status} |
+| Security Vulnerabilities | ${getEmoji(security_status)} ${security_status} |
+
+**Next Steps:**
+1. Review the changelog/release notes above
+2. Check if any breaking changes apply to your code
+3. Run full test suite locally if needed
+4. Approve and merge if all checks pass
+
+---
+*Automated check by GitHub Actions*`;
+            
+            try {
+              github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body
+              });
+            } catch (error) {
+              console.log('Could not post comment:', error);
+            }

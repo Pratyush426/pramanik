@@ -48,7 +48,7 @@ Format your response as a JSON array like this:
 Return ONLY the JSON array, no other text.`;
 
   const response = await getGroqClient().chat.completions.create({
-    model: "llama-3.3-70b-versatile",
+    model: "llama-3.1-8b-instant",
     messages: [{ role: "user", content: prompt }],
     temperature: 0.3,
     max_tokens: 2000
@@ -114,7 +114,7 @@ Format as JSON:
 Return ONLY the JSON, no other text.`;
 
   const response = await getGroqClient().chat.completions.create({
-    model: "llama-3.3-70b-versatile",
+    model: "llama-3.1-8b-instant",
     messages: [{ role: "user", content: prompt }],
     temperature: 0.4,
     max_tokens: 3000
